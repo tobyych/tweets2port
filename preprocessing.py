@@ -258,7 +258,7 @@ def add_null_files():
     folderpath = [x[0] for x in os.walk(datapath)][1:]
     for folder in folderpath:
         date = datetime.date(2014, 1, 1)
-        while date != datetime.date(2016, 3, 31):
+        while date != datetime.date(2016, 4, 1):
             filepath = os.path.join(folder, date.strftime("%Y-%m-%d"))
             if not os.path.exists(filepath + ".json"):
                 with open(filepath + ".json", "w+") as f:
@@ -267,5 +267,5 @@ def add_null_files():
 
 
 # prepocess()
-delete_unused_files()
-add_null_files()
+# delete_unused_files()
+# add_null_files()
