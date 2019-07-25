@@ -96,18 +96,18 @@ def get_all_tweets(tweets_all_stocks):
 
 
 def load_prices(
-    datapath="../data/stocknet-dataset/price/preprocessed", to_csv=False, to_pickle=True
+    datapath="../data/stocknet-dataset/price/raw", to_csv=False, to_pickle=True
 ):
     df_list = []
     keys_list = []
     filelist = os.listdir(datapath)
     for filename in filelist:
         with open(os.path.join(datapath, filename), "r") as f:
-            csv_reader = csv.reader(f, delimiter="\t")
+            csv_reader = csv.reader(f, delimiter=",")
             temp_data = []
             for line in csv_reader:
                 temp_data.append(line)
-        df = pd.DataFrame(temp_data)
+        df = pd.DataFrame(temp_data[1:])
         df.columns = [
             "date",
             "open",
@@ -152,22 +152,26 @@ def get_price_df(df, to_csv=False, to_pickle=True):
     return price_df
 
 
-def get_price_by_stock(stock_name, df, to_csv=False, to_pickle=True):
+def get_return_by_stock(stock_name, df, to_csv=False, to_pickle=True):
     df = df.xs(stock_name)
     df = df.astype("float32")
     df.sort_index(axis=0, inplace=True)
-    df = df.loc["2013-12-31":"2016-03-01", "adjusted close"]
+    df = df.loc["2013-12-31":"2016-03-31", "adjusted close"]
     df.index = pd.to_datetime(df.index)
     df = df.reindex(pd.date_range(start="31/12/2013", end="3/31/2016"))
     df = df.asfreq(pd.tseries.offsets.BDay())
     df.fillna(method="pad", inplace=True)
+    df = df.pct_change(1)
+    df.replace([np.inf, -np.inf], np.nan, inplace=True)
+    df.fillna(method="pad", inplace=True)
+    # note: current method doesn't account for holidays
     df = df.iloc[1:]
     if to_csv:
-        if not os.path.exists("temp/prices/csv/"):
-            os.makedirs("temp/prices/csv/")
-        df.to_csv("temp/prices/csv/" + stock_name + ".csv")
+        if not os.path.exists("temp/returns/csv/"):
+            os.makedirs("temp/returns/csv/")
+        df.to_csv("temp/returns/csv/" + stock_name + ".csv")
     if to_pickle:
-        if not os.path.exists("temp/prices/pickle/"):
-            os.makedirs("temp/prices/pickle/")
-        df.to_pickle("temp/prices/pickle/" + stock_name + ".pickle")
+        if not os.path.exists("temp/returns/pickle/"):
+            os.makedirs("temp/returns/pickle/")
+        df.to_pickle("temp/returns/pickle/" + stock_name + ".pickle")
     return df

@@ -12,11 +12,11 @@ logging.basicConfig(
 warnings.filterwarnings("ignore")
 
 
-def train_word2vec(use_pickle=True):
-    if use_pickle:
-        df = pd.read_pickle("temp/tweets.pickle")
-    else:
+def train_word2vec():
+    if not os.path.exists("temp/tweets.pickle"):
         df = d.load_tweets()
+    else:
+        df = pd.read_pickle("temp/tweets.pickle")
     sentences = d.get_all_tweets(df)
     n_cpu = multiprocessing.cpu_count()
     model = Word2Vec(size=50, min_count=1, workers=n_cpu - 1)
@@ -46,14 +46,50 @@ def get_embeddings(tweets_df, model):
     return embeddings_df
 
 
-def add_paddings(embeddings_df, wv_size):
-    max_len = 0
-    for item in embeddings_df:
-        max_len = len(item) if len(item) > max_len else max_len
-    for item in embeddings_df:
-        for _ in range(max_len - len(item)):
-            item.append(np.zeros(wv_size, dtype="float32"))
-    return embeddings_df
+def padding(array, target_len, wv_size):
+    if target_len > len(array):
+        for _ in range(target_len - len(array)):
+            array.append(np.zeros(wv_size, dtype="float32"))
+        return array
+    else:
+        for _ in range(target_len - len(array)):
+            array.pop()
+        return array
+
+
+def add_paddings(embeddings_df, wv_size, use_max=True):
+    if use_max:
+        padded_len = np.max(embeddings_df.apply(lambda x: len(x)))
+    else:
+        padded_len = int(np.mean(embeddings_df.apply(lambda x: len(x))))
+    padded_list = []
+    for item in embeddings_df.values:
+        if len(item) < padded_len:
+            for _ in range(padded_len - len(item)):
+                item.append(np.zeros(wv_size, dtype="float32"))
+            padded_list.append(item)
+        else:
+            padded_list.append(item[:padded_len])
+    new_embeddings_df = pd.Series(padded_list)
+    # embeddings_df.apply(padding, args=(padded_len, wv_size))
+    assert embeddings_df.shape == new_embeddings_df.shape
+    return new_embeddings_df
+
+
+def add_randomness(padded_embeddings, wv_size):
+    outer_list = []
+    for item in padded_embeddings.values:
+        inner_list = []
+        for wv in item:
+            if all(elem == 0 for elem in wv):
+                # if wv == np.zeros(wv.shape, dtype=wv.dtype):
+                inner_list.append(np.random.rand(wv_size))
+            else:
+                inner_list.append(wv)
+        outer_list.append(inner_list)
+    new_padded_embeddings = pd.Series(outer_list)
+    assert padded_embeddings.shape == new_padded_embeddings.shape
+    return new_padded_embeddings
 
 
 def get_padded_embeddings(
@@ -65,7 +101,8 @@ def get_padded_embeddings(
 ):
     tweets = pd.read_pickle(os.path.join(path_to_tweets, stock_name + ".pickle"))
     embeddings = get_embeddings(tweets, w2v_model)
-    padded_embeddings = add_paddings(embeddings, w2v_model.vector_size)
+    padded_embeddings = add_paddings(embeddings, w2v_model.vector_size, use_max=False)
+    padded_embeddings = add_randomness(padded_embeddings, w2v_model.vector_size)
     if to_csv:
         if not os.path.exists("temp/padded_embeddings/csv"):
             os.makedirs("temp/padded_embeddings/csv")

@@ -48,14 +48,15 @@ def main(passed_args=None):
         prices = d.load_prices()
         w2v_model = w2v.load_word2vec()
         for stock in stock_universe:
-            d.get_price_by_stock(stock, prices)
+            d.get_return_by_stock(stock, prices)
             d.load_tweets_by_stock(stock)
             w2v.get_padded_embeddings(stock, w2v_model)
     # training and evaluation
     for stock in stock_universe:
+        print(stock)
         nn.train_nn_by_stock(stock)
 
 
 if __name__ == "__main__":
+    # main(["-p"])
     main()
-
