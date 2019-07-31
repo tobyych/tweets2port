@@ -71,7 +71,6 @@ def add_paddings(embeddings_df, wv_size, use_max=True):
         else:
             padded_list.append(item[:padded_len])
     new_embeddings_df = pd.Series(padded_list)
-    # embeddings_df.apply(padding, args=(padded_len, wv_size))
     assert embeddings_df.shape == new_embeddings_df.shape
     return new_embeddings_df
 
@@ -82,7 +81,6 @@ def add_randomness(padded_embeddings, wv_size):
         inner_list = []
         for wv in item:
             if all(elem == 0 for elem in wv):
-                # if wv == np.zeros(wv.shape, dtype=wv.dtype):
                 inner_list.append(np.random.rand(wv_size))
             else:
                 inner_list.append(wv)
@@ -101,8 +99,8 @@ def get_padded_embeddings(
 ):
     tweets = pd.read_pickle(os.path.join(path_to_tweets, stock_name + ".pickle"))
     embeddings = get_embeddings(tweets, w2v_model)
-    padded_embeddings = add_paddings(embeddings, w2v_model.vector_size, use_max=False)
-    padded_embeddings = add_randomness(padded_embeddings, w2v_model.vector_size)
+    padded_embeddings = add_paddings(embeddings, w2v_model.vector_size, use_max=True)
+    # padded_embeddings = add_randomness(padded_embeddings, w2v_model.vector_size)
     if to_csv:
         if not os.path.exists("temp/padded_embeddings/csv"):
             os.makedirs("temp/padded_embeddings/csv")
