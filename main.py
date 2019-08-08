@@ -44,6 +44,14 @@ def main(passed_args=None):
         default=False,
         help="toogle this option if you are making predictions",
     )
+    parser.add_argument(
+        "--markowtiz",
+        "-m",
+        dest="markowitz",
+        action="store_true",
+        default=False,
+        help="toogle this option if you are doing Markowitz portfolio optimisation",
+    )
     args = parser.parse_args(passed_args)
     if args.prep:
         # prepare Word2Vec model
@@ -102,6 +110,9 @@ def main(passed_args=None):
                 os.makedirs("./output/")
             results_df.to_csv("./output/" + stock + ".csv")
         sys.exit()
+
+    if args.markowitz:
+        pass
 
     if os.path.exists("./best-hyperparam.txt"):
         with open("best-hyperparam.txt", "rb") as f:

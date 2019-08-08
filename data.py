@@ -175,3 +175,32 @@ def get_return_by_stock(stock_name, df, to_csv=False, to_pickle=True):
             os.makedirs("temp/returns/pickle/")
         df.to_pickle("temp/returns/pickle/" + stock_name + ".pickle")
     return df
+
+
+def load_output(path_to_output, to_csv=False, to_pickle=True):
+    filelist = os.listdir(path_to_output)
+    stock_list = []
+    df_list = []
+    for filename in filelist:
+        with open(os.path.join(path_to_output, filename), "r") as f:
+            csv_reader = csv.reader(f, delimiter=",")
+            temp_data = []
+            for line in csv_reader:
+                temp_data.append(line)
+            columns = temp_data.pop(0)
+            temp_df = pd.DataFrame(temp_data)
+            temp_df = temp_df.apply(pd.to_numeric)
+            temp_df.columns = columns
+            df_list.append(temp_df["pred"].values)
+            stock_list.append(
+                os.path.basename(os.path.normpath(filename))[:-4]
+            )  # taking away '.csv' 4 chars
+    df = pd.DataFrame(df_list)
+    df.index = stock_list
+    if to_csv:
+        df.to_csv("temp/pred.csv")
+    if to_pickle:
+        df.to_pickle("temp/pred.pickle")
+
+
+load_output(path_to_output="./output")

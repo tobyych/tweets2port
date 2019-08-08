@@ -223,7 +223,6 @@ stock_universe = [
     "WFC",
     "MRK",
     "JNJ",
-    "BABA",
     "BAC",
     "FB",
     "MSFT",
