@@ -1,6 +1,6 @@
 import itertools
 
-HYPERPARAM_DICT = {
+NN_HYPERPARAM_DICT = {
     "BATCH_SIZE": [16, 32],
     "N_EPOCHS": [50, 100, 500],
     "LEARNING_RATE": [1e-4, 1e-5, 1e-6],
@@ -9,6 +9,18 @@ HYPERPARAM_DICT = {
     "VALIDATION_SIZE": [0.2],
     "TEST_SIZE": [0.1],
     "DROP_LAST": [True, False],
+}
+
+RNN_HYPERPARAM_DICT = {
+    "BATCH_SIZE": [32],
+    "N_EPOCHS": [50],
+    "LEARNING_RATE": [1e-3],
+    "WEIGHT_DECAY": [1e-3],
+    "CLIPPING_THRESHOLD": [3],
+    "VALIDATION_SIZE": [0.2],
+    "TEST_SIZE": [0.1],
+    "DROP_LAST": [True],
+    "HIDDEN_SIZE": [50],
 }
 
 

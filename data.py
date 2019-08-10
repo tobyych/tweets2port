@@ -95,6 +95,26 @@ def get_all_tweets(tweets_all_stocks):
     return list_all_tweets
 
 
+def get_all_words(tweets_all_stocks):
+    list_all_words = []
+    for j in range(tweets_all_stocks.shape[1]):
+        for i in range(tweets_all_stocks.shape[0]):
+            if (
+                tweets_all_stocks.iloc[i, j] != [[]]
+                and tweets_all_stocks.iloc[i, j] != None
+            ):
+                for item in tweets_all_stocks.iloc[i, j]:
+                    list_all_words += item
+    with open("temp/corpus.txt", "w") as f:
+        wr = csv.writer(f, delimiter=" ")
+        wr.writerow(list_all_words)
+    list_all_words = list(set(list_all_words))
+    with open("temp/vocab.txt", "w") as f:
+        wr = csv.writer(f, delimiter=" ")
+        wr.writerow(list_all_words)
+    return list_all_words
+
+
 def load_prices(
     datapath="../data/stocknet-dataset/price/raw", to_csv=False, to_pickle=True
 ):
@@ -201,6 +221,3 @@ def load_output(path_to_output, to_csv=False, to_pickle=True):
         df.to_csv("temp/pred.csv")
     if to_pickle:
         df.to_pickle("temp/pred.pickle")
-
-
-load_output(path_to_output="./output")

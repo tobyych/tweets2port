@@ -20,8 +20,7 @@ HYPERPARAM = {
 class Encoder(torch.nn.Module):
     def __init__(self, embedding_dim1, embedding_dim2):
         super(Encoder, self).__init__()
-        self.embedding_dim1 = embedding_dim1
-        self.embedding_dim2 = embedding_dim2
+
         self.fc1 = torch.nn.Sequential(
             torch.nn.Linear(embedding_dim1 * embedding_dim2, 100),
             torch.nn.ReLU(),
