@@ -1,4 +1,5 @@
-from gensim.models import Word2Vec
+from gensim.models import Word2Vec, KeyedVectors
+from gensim.scripts.glove2word2vec import glove2word2vec
 import data as d
 import pandas as pd
 import numpy as np
@@ -94,6 +95,7 @@ def get_padded_embeddings(
     stock_name,
     w2v_model,
     path_to_tweets="temp/tweets/pickle",
+    path_to_output="temp/padded_embeddings",
     to_csv=False,
     to_pickle=True,
 ):
@@ -102,14 +104,23 @@ def get_padded_embeddings(
     padded_embeddings = add_paddings(embeddings, w2v_model.vector_size, use_max=True)
     # padded_embeddings = add_randomness(padded_embeddings, w2v_model.vector_size)
     if to_csv:
-        if not os.path.exists("temp/padded_embeddings/csv"):
-            os.makedirs("temp/padded_embeddings/csv")
-        padded_embeddings.to_csv("temp/padded_embeddings/csv/" + stock_name + ".csv")
+        if not os.path.exists(os.path.join(path_to_output, "csv")):
+            os.makedirs(os.path.join(path_to_output, "csv"))
+        padded_embeddings.to_csv(
+            os.path.join(path_to_output, "csv", stock_name + ".csv")
+        )
     if to_pickle:
-        if not os.path.exists("temp/padded_embeddings/pickle"):
-            os.makedirs("temp/padded_embeddings/pickle")
+        if not os.path.exists(os.path.join(path_to_output, "pickle")):
+            os.makedirs(os.path.join(path_to_output, "pickle"))
         padded_embeddings.to_pickle(
-            "temp/padded_embeddings/pickle/" + stock_name + ".pickle"
+            os.path.join(path_to_output, "pickle", stock_name + ".pickle")
         )
     return padded_embeddings
 
+
+def load_glove_model(
+    path_to_glove="./temp/glove_wv.txt", path_to_output="./temp/glove_wv_w2vformat.txt"
+):
+    glove2word2vec(path_to_glove, path_to_output)
+    model = KeyedVectors.load_word2vec_format(path_to_output)
+    return model

@@ -5,7 +5,7 @@ import pandas as pd
 import numpy as np
 import os, multiprocessing, warnings, logging
 
-logging.basicConfig(``
+logging.basicConfig(
     format="%(levelname)s - %(asctime)s: %(message)s",
     datefmt="%H:%M:%S",
     level=logging.INFO,
