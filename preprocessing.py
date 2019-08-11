@@ -244,6 +244,21 @@ stock_universe = [
 ]
 
 
+stock_universe_test = [
+    "T",
+    "PG",
+    "XOM",
+    "BA",
+    "GE",
+    "AMGN",
+    "DIS",
+    "CSCO",
+    "KO",
+    "C",
+    "D",
+]
+
+
 def delete_unused_files(
     datapath="../data/stocknet-dataset/tweet/new_processed", filelist=stock_universe
 ):

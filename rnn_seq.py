@@ -133,7 +133,8 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam):
         running_training_loss = 0
         for seq, ret in zip(train_vectorised_seq, train_returns):
             # if no tweet on a day, then directly pass a zero tensor to feedforward
-            if len(seq[0]) == 0:
+            seq = [s for s in seq if len(s) != 0]
+            if seq == [] or len(seq[0]) == 0:
                 avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"]).to(device)
             else:
                 list_daily_rep = []
