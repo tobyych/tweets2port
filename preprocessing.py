@@ -1,4 +1,4 @@
-import os
+import os, sys
 import re
 import json
 from nltk.corpus import stopwords
@@ -39,7 +39,7 @@ class Preprocessor:
 
     def RemoveURL(self, s):
         URL_PATTERN = re.compile(
-            r'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))'
+            r'(?i)\b^((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))'
         )
         return URL_PATTERN.sub("", s)
 
@@ -198,14 +198,16 @@ def prepocess():
                 clean_text_list.append((idx, p.clean(text)))
             clean_text = dict(clean_text_list)
 
-            ofpath = "../data/stocknet-dataset/tweet/new_processed/" + os.path.basename(
+            ofpath = os.path.join("../data/stocknet-dataset/tweet/new_processed",os.path.basename(
                 os.path.normpath(folder)
-            )
+            ))
             if not os.path.exists(ofpath):
                 os.makedirs(ofpath)
             ofname = filename
             with open(ofpath + "/" + ofname + ".json", "w") as f:
                 f.write(json.dumps(clean_text))
+    print("...preprocessing has been completed")
+    sys.exit()
 
 
 stock_universe = [
@@ -243,7 +245,7 @@ stock_universe = [
 
 
 def delete_unused_files(
-    datapath="../data/stocknet-dataset/tweet/new_processed/", filelist=stock_universe
+    datapath="../data/stocknet-dataset/tweet/new_processed", filelist=stock_universe
 ):
     folderpath = [x[0] for x in os.walk(datapath)][1:]
     for folder in folderpath:
@@ -253,7 +255,7 @@ def delete_unused_files(
 
 def add_null_files():
     null_dict = {0: []}
-    datapath = "../data/stocknet-dataset/tweet/new_processed/"
+    datapath = "../data/stocknet-dataset/tweet/new_processed"
     folderpath = [x[0] for x in os.walk(datapath)][1:]
     for folder in folderpath:
         date = datetime.date(2014, 1, 1)
@@ -263,8 +265,3 @@ def add_null_files():
                 with open(filepath + ".json", "w+") as f:
                     f.write(json.dumps(null_dict))
             date += datetime.timedelta(1)
-
-
-# prepocess()
-# delete_unused_files()
-# add_null_files()

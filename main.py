@@ -75,9 +75,10 @@ def main(passed_args=None):
             d.get_return_by_stock(stock, prices)
             d.load_tweets_by_stock(stock)
             w2v.get_padded_embeddings(stock, w2v_model)
+        sys.exit()
 
     if args.tuning:
-        hyperparam_list = get_hyperparam_list(RNN_HYPERPARAM_DICT)
+        hyperparam_list = get_hyperparam_list(NN_HYPERPARAM_DICT)
         best_hyperparam_list = []
         for stock in stock_universe:
             print(stock)
@@ -125,33 +126,26 @@ def main(passed_args=None):
 
     if args.train_rnn:
         hyperparam_list = get_hyperparam_list(RNN_HYPERPARAM_DICT)
-        best_hyperparam_list = []
-        for stock in stock_universe:
-            print(stock)
-            y = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
-            y = nn.normalise(torch.Tensor(np.stack(y.values, axis=0)))
-            vectorised_seq, vocab = rnn.get_vectorised_seq_by_stock(stock)
-            input_size = len(vocab)
-            for hyperparam in hyperparam_list:
-                rnn.train_rnn(vectorised_seq, y, input_size, hyperparam)
-        #     seq_tensor, seq_lengths, _ = rnn.get_seq_input(vectorised_seq)
-        #     print(seq_tensor.shape, seq_lengths.shape, y.shape)
-        #     torch_dataset = torch.utils.data.TensorDataset(seq_tensor, seq_lengths, y)
-        #     train_set, _ = nn.train_test_split(torch_dataset, hyperparam["TEST_SIZE"])
-        #     train_set, validation_set = nn.train_test_split(
-        #         train_set, hyperparam["VALIDATION_SIZE"]
-        #     )
-        #     tuning_list = []
-        #     for hyperparam in hyperparam_list:
-        #         _, _, _, validation_losses = rnn.train_rnn(
-        #             train_set, validation_set, input_size, hyperparam
-        #         )
-        #         tuning_list.sort(key=operator.itemgetter(1))
-        #     best_hyperparam = tuning_list[0][0]
-        #     best_hyperparam_list.append((stock, best_hyperparam))
-        # with open("best-hyperparam.txt", "wb") as f:
-        #     pickle.dump(best_hyperparam_list, f)
-        # print(best_hyperparam_list)
+        for hyperparam in hyperparam_list:
+            for stock in stock_universe:
+                print(stock)
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                returns = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
+                returns = nn.normalise(torch.tensor(np.stack(returns.values, axis=0), device=device))
+                vectorised_seq, vocab = rnn.get_vectorised_seq_by_stock(stock)
+                input_size = len(vocab)
+
+                encoder, feedforward, _, results = rnn.train_rnn(vectorised_seq, returns, input_size, hyperparam)
+                if not os.path.exists("temp/rnn"):
+                    os.makedirs("temp/rnn/encoder")
+                    os.makedirs("temp/rnn/feedforward")
+                torch.save(encoder.state_dict(), "temp/rnn/encoder/" + stock + ".pth")
+                torch.save(feedforward.state_dict(), "temp/rnn/feedforward/" + stock + ".pth")
+                results_df = pd.DataFrame(results)
+                results_df.columns = ["returns", "pred", "loss"]
+                if not os.path.exists("./output/rnn"):
+                    os.makedirs("./output/rnn")
+                results_df.to_csv("./output/rnn/" + stock + ".csv")
         sys.exit()
 
     if args.markowitz:
@@ -179,5 +173,4 @@ def main(passed_args=None):
 
 
 if __name__ == "__main__":
-    # main(["-p"])
-    main(["-t"])
+    main()
