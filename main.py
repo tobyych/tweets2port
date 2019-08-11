@@ -23,12 +23,12 @@ def main(passed_args=None):
         description="train a neural network on tweets against prices"
     )
     parser.add_argument(
-        "--prep",
-        "-p",
-        dest="prep",
+        "--word2vec",
+        "-w",
+        dest="word2vec",
         action="store_true",
         default=False,
-        help="toggle this option if you are running this program the first time",
+        help="toggle this option if you are obtaining dataset using word2vec",
     )
     parser.add_argument(
         "--tune",
@@ -62,8 +62,16 @@ def main(passed_args=None):
         default=False,
         help="toogle this option if you are doing Markowitz portfolio optimisation",
     )
+    parser.add_argument(
+        "--glove",
+        "-g",
+        dest="glove",
+        action="store_true",
+        default=False,
+        help="toogle this option if you are obtaining dataset using glove",
+    )
     args = parser.parse_args(passed_args)
-    if args.prep:
+    if args.word2vec:
         # prepare Word2Vec model
         if not os.path.exists(PATH_TO_WORD2VEC):
             w2v.train_word2vec()
@@ -76,6 +84,17 @@ def main(passed_args=None):
             d.load_tweets_by_stock(stock)
             w2v.get_padded_embeddings(stock, w2v_model)
         sys.exit()
+
+    if args.glove:
+        # prepare all data required
+        prices = d.load_prices()
+        w2v_model = w2v.load_glove_model(path_to_glove="./temp/glove_wv.txt")
+        for stock in stock_universe:
+            d.get_return_by_stock(stock, prices)
+            d.load_tweets_by_stock(stock)
+            w2v.get_padded_embeddings(
+                stock, w2v_model, path_to_output="./temp/padded_embeddings/glove"
+            )
 
     if args.tuning:
         hyperparam_list = get_hyperparam_list(NN_HYPERPARAM_DICT)
