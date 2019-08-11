@@ -99,35 +99,29 @@ class FeedForward(torch.nn.Module):
         )
 
     def forward(self, x):
-        return self.sequential(x)
+        x = self.sequential(x)
+        return x
 
 
-def get_seq_input(vectorised_seq):
-    seq_lengths = torch.LongTensor(list(map(len, vectorised_seq)))
-    seq_tensor = torch.zeros((len(vectorised_seq), seq_lengths.max())).long()
+def get_seq_input(vectorised_seq, device):
+    seq_lengths = torch.LongTensor(list(map(len, vectorised_seq))).to(device)
+    seq_tensor = torch.zeros((len(vectorised_seq), seq_lengths.max())).long().to(device)
     for idx, (seq, seqlen) in enumerate(zip(vectorised_seq, seq_lengths)):
-        seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
+        seq_tensor[idx, :seqlen] = torch.LongTensor(seq).to(device)
     # sorting
     seq_lengths, perm_idx = seq_lengths.sort(0, descending=True)
     seq_tensor = seq_tensor[perm_idx]
     return seq_tensor, seq_lengths, perm_idx
 
 
-def get_seq_input_one_sample(vectorised_seq):
-    seq_lengths = torch.LongTensor(list(map(len, vectorised_seq)))
-    seq_tensor = torch.zeros((len(vectorised_seq), seq_lengths.max())).long()
-    for idx, (seq, seqlen) in enumerate(zip(vectorised_seq, seq_lengths)):
-        seq_tensor[idx, :seqlen] = torch.LongTensor(seq)
-    # sorting
-    seq_lengths, perm_idx = seq_lengths.sort(0, descending=True)
-    seq_tensor = seq_tensor[perm_idx]
-    return seq_tensor, seq_lengths, perm_idx
-
-
-def train_rnn(vectorised_seq, prices, input_size, hyperparam):
-    encoder = EncoderRNN(input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"])
-    feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"])
-    criterion = torch.nn.MSELoss()
+def train_rnn(vectorised_seq, returns, input_size, hyperparam):
+    valid_idx = len(vectorised_seq) - int(len(vectorised_seq) * hyperparam['VALIDATION_SIZE'])
+    train_vectorised_seq, test_vectorised_seq = vectorised_seq[:valid_idx], vectorised_seq[valid_idx:] 
+    train_returns, test_returns = returns[:valid_idx], returns[valid_idx:] 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    encoder = EncoderRNN(input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"]).to(device)
+    feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"]).to(device)
+    criterion = torch.nn.MSELoss().to(device)
     optimizer_encoder = torch.optim.Adam(
         encoder.parameters(), lr=hyperparam["LEARNING_RATE"]
     )
@@ -137,23 +131,23 @@ def train_rnn(vectorised_seq, prices, input_size, hyperparam):
     training_losses = []
     for epoch in range(hyperparam["N_EPOCHS"]):
         running_training_loss = 0
-        for seq, price in zip(vectorised_seq, prices):
+        for seq, ret in zip(train_vectorised_seq, train_returns):
             # if no tweet on a day, then directly pass a zero tensor to feedforward
             if len(seq[0]) == 0:
-                # pass zero tensor to feedforward
-                avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"])
+                avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"]).to(device)
             else:
                 list_daily_rep = []
                 for s in seq:
-                    seq_tensor, seq_lengths, _ = get_seq_input([s])
+                    seq_tensor, seq_lengths, _ = get_seq_input([s], device=device)
                     optimizer_encoder.zero_grad()
                     _, (ht, _) = encoder(seq_tensor, seq_lengths)
                     list_daily_rep.append(ht[-1])
                 avg_tweet_rep = torch.mean(
-                    torch.stack(list_daily_rep), dim=1, keepdim=True
-                )
-            pred = feedforward(avg_tweet_rep)
-            loss = criterion(pred, price)
+                    torch.stack(list_daily_rep), dim=0
+                ).to(device)
+            optimizer_ff.zero_grad()
+            pred = feedforward(avg_tweet_rep.view(-1, ))
+            loss = criterion(pred, ret)
             loss.backward()
             torch.nn.utils.clip_grad_value_(
                 encoder.parameters(), hyperparam["CLIPPING_THRESHOLD"]
@@ -166,75 +160,27 @@ def train_rnn(vectorised_seq, prices, input_size, hyperparam):
             running_training_loss += loss.item()
         training_losses.append(running_training_loss)
         print(f"(epoch {epoch}) training loss: {training_losses[epoch]}")
+    # eval mode
+    with torch.set_grad_enabled(False):
+        results = []
+        for seq, ret in zip(test_vectorised_seq, test_returns):
+            # if no tweet on a day, then directly pass a zero tensor to feedforward
+            if len(seq[0]) == 0:
+                avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"]).to(device)
+            else:
+                list_daily_rep = []
+                for s in seq:
+                    seq_tensor, seq_lengths, _ = get_seq_input([s], device=device)
+                    _, (ht, _) = encoder(seq_tensor, seq_lengths)
+                    list_daily_rep.append(ht[-1])
+                avg_tweet_rep = torch.mean(
+                    torch.stack(list_daily_rep), dim=0
+                ).to(device)
+            pred = feedforward(avg_tweet_rep.view(-1,))
+            loss = criterion(pred, ret)
+        results.append((ret.item(), pred.item(), loss.item()))
     print("...training has been completed")
-    return encoder, feedforward, training_losses
-
-
-def a():
-    train_loader = torch.utils.data.DataLoader(
-        dataset=train_set,
-        batch_size=hyperparam["BATCH_SIZE"],
-        drop_last=hyperparam["DROP_LAST"],
-    )
-    test_loader = torch.utils.data.DataLoader(
-        dataset=test_set,
-        batch_size=hyperparam["BATCH_SIZE"],
-        drop_last=hyperparam["DROP_LAST"],
-    )
-
-    encoder = EncoderRNN(input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"])
-    feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"])
-    criterion = torch.nn.MSELoss()
-    optimizer_encoder = torch.optim.Adam(
-        encoder.parameters(), lr=hyperparam["LEARNING_RATE"]
-    )
-    optimizer_ff = torch.optim.Adadelta(
-        feedforward.parameters(), lr=hyperparam["LEARNING_RATE"]
-    )
-
-    training_losses = []
-    validation_losses = []
-    for epoch in range(hyperparam["N_EPOCHS"]):
-        # training
-        running_train_loss = 0
-        running_valid_loss = 0
-        for batch_seq_tensor, batch_seq_lengths, batch_y in train_loader:
-            optimizer_encoder.zero_grad()
-            optimizer_ff.zero_grad()
-            # forward step
-            _, (ht, _) = encoder(batch_seq_tensor, batch_seq_lengths)
-            pred = feedforward(ht[-1])
-            batch_y = batch_y.view(-1, 1)
-            loss_ff = criterion(pred, batch_y)
-            # backward step
-            loss_ff.backward()
-            torch.nn.utils.clip_grad_value_(
-                encoder.parameters(), hyperparam["CLIPPING_THRESHOLD"]
-            )
-            torch.nn.utils.clip_grad_value_(
-                feedforward.parameters(), hyperparam["CLIPPING_THRESHOLD"]
-            )
-            optimizer_encoder.step()
-            optimizer_ff.step()
-            running_train_loss += loss_ff.item()
-        training_losses.append(running_train_loss)
-
-        # evaluation
-        with torch.set_grad_enabled(False):
-            for batch_seq_tensor, batch_seq_lengths, batch_y in test_loader:
-                _, (ht, _) = encoder(batch_seq_tensor, batch_seq_lengths)
-                pred = feedforward(ht[-1])
-                batch_y = batch_y.view(-1, 1)
-                loss_ff = criterion_ff(pred, batch_y)
-                running_valid_loss += loss_ff.item()
-            validation_losses.append(running_valid_loss)
-
-        print(
-            f"(epoch {epoch}) training loss: {training_losses[epoch]}, validation loss: {validation_losses[epoch]}"
-        )
-    print("...training has been completed")
-    return encoder, feedforward, training_losses, validation_losses
-
+    return encoder, feedforward, training_losses, results
 
 # # REMEMBER: Your outputs are sorted. If you want the original ordering
 # # back (to compare to some gt labels) unsort them
