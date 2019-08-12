@@ -114,60 +114,62 @@ def get_seq_input(vectorised_seq, device):
     return seq_tensor, seq_lengths, perm_idx
 
 
-def train_rnn(vectorised_seq, returns, input_size, hyperparam):
-    valid_idx = len(vectorised_seq) - int(
-        len(vectorised_seq) * hyperparam["VALIDATION_SIZE"]
-    )
-    train_vectorised_seq, test_vectorised_seq = (
-        vectorised_seq[:valid_idx],
-        vectorised_seq[valid_idx:],
-    )
-    train_returns, test_returns = returns[:valid_idx], returns[valid_idx:]
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    encoder = EncoderRNN(
-        input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"]
-    ).to(device)
-    feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"]).to(device)
-    criterion = torch.nn.MSELoss().to(device)
-    optimizer_encoder = torch.optim.Adam(
-        encoder.parameters(), lr=hyperparam["LEARNING_RATE"]
-    )
-    optimizer_ff = torch.optim.Adadelta(
-        encoder.parameters(), lr=hyperparam["LEARNING_RATE"]
-    )
-    training_losses = []
-    for epoch in range(hyperparam["N_EPOCHS"]):
-        running_training_loss = 0
-        for seq, ret in zip(train_vectorised_seq, train_returns):
-            # if no tweet on a day, then directly pass a zero tensor to feedforward
-            seq = [s for s in seq if len(s) != 0]
-            if seq == [] or len(seq[0]) == 0:
-                avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"]).to(device)
-            else:
-                list_daily_rep = []
-                for s in seq:
-                    seq_tensor, seq_lengths, _ = get_seq_input([s], device=device)
-                    optimizer_encoder.zero_grad()
-                    _, (ht, _) = encoder(seq_tensor, seq_lengths)
-                    list_daily_rep.append(ht[-1])
-                avg_tweet_rep = torch.mean(torch.stack(list_daily_rep), dim=0).to(
-                    device
+def train_rnn(vectorised_seq, returns, input_size, hyperparam, eval_only=False):
+    if eval_only == False:
+        valid_idx = len(vectorised_seq) - int(
+            len(vectorised_seq) * hyperparam["VALIDATION_SIZE"]
+        )
+        train_vectorised_seq, test_vectorised_seq = (
+            vectorised_seq[:valid_idx],
+            vectorised_seq[valid_idx:],
+        )
+        train_returns, test_returns = returns[:valid_idx], returns[valid_idx:]
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        encoder = EncoderRNN(
+            input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"]
+        ).to(device)
+        feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"]).to(device)
+        criterion = torch.nn.MSELoss().to(device)
+        optimizer_encoder = torch.optim.Adam(
+            encoder.parameters(), lr=hyperparam["LEARNING_RATE"]
+        )
+        optimizer_ff = torch.optim.Adadelta(
+            encoder.parameters(), lr=hyperparam["LEARNING_RATE"]
+        )
+        training_losses = []
+        for epoch in range(hyperparam["N_EPOCHS"]):
+            running_training_loss = 0
+            for seq, ret in zip(train_vectorised_seq, train_returns):
+                # if no tweet on a day, then directly pass a zero tensor to feedforward
+                seq = [s for s in seq if len(s) != 0]
+                if seq == [] or len(seq[0]) == 0:
+                    avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"]).to(device)
+                else:
+                    list_daily_rep = []
+                    for s in seq:
+                        seq_tensor, seq_lengths, _ = get_seq_input([s], device=device)
+                        optimizer_encoder.zero_grad()
+                        _, (ht, _) = encoder(seq_tensor, seq_lengths)
+                        list_daily_rep.append(ht[-1])
+                    avg_tweet_rep = torch.mean(torch.stack(list_daily_rep), dim=0).to(
+                        device
+                    )
+                optimizer_ff.zero_grad()
+                pred = feedforward(avg_tweet_rep.view(-1))
+                loss = criterion(pred, ret)
+                loss.backward()
+                torch.nn.utils.clip_grad_value_(
+                    encoder.parameters(), hyperparam["CLIPPING_THRESHOLD"]
                 )
-            optimizer_ff.zero_grad()
-            pred = feedforward(avg_tweet_rep.view(-1))
-            loss = criterion(pred, ret)
-            loss.backward()
-            torch.nn.utils.clip_grad_value_(
-                encoder.parameters(), hyperparam["CLIPPING_THRESHOLD"]
-            )
-            torch.nn.utils.clip_grad_value_(
-                feedforward.parameters(), hyperparam["CLIPPING_THRESHOLD"]
-            )
-            optimizer_encoder.step()
-            optimizer_ff.step()
-            running_training_loss += loss.item()
-        training_losses.append(running_training_loss)
-        print(f"(epoch {epoch}) training loss: {training_losses[epoch]}")
+                torch.nn.utils.clip_grad_value_(
+                    feedforward.parameters(), hyperparam["CLIPPING_THRESHOLD"]
+                )
+                optimizer_encoder.step()
+                optimizer_ff.step()
+                running_training_loss += loss.item()
+            training_losses.append(running_training_loss)
+            print(f"(epoch {epoch}) training loss: {training_losses[epoch]}")
+
     # eval mode
     with torch.set_grad_enabled(False):
         results = []

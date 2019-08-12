@@ -60,18 +60,3 @@ def equally_weighted_port(returns):
         np.sqrt(np.dot(weights, cov @ weights)),
     )
 
-
-returns = pd.read_pickle("temp/pred.pickle")
-_, opt_mean, opt_std = optimal_port(returns)
-print(opt_mean, opt_std)
-_, opt_ss_mean, opt_ss_std = optimal_port(returns, short_sell=True)
-_, ew_mean, ew_std = equally_weighted_port(returns)
-fig = plt.figure()
-plt.plot(opt_std, opt_mean)
-plt.plot(opt_ss_std, opt_ss_mean, "y")
-plt.plot(ew_std, ew_mean, "ro", markersize=10)
-plt.ylabel("mean")
-plt.xlabel("std")
-plt.xlim(0, 0.7)
-plt.ylim(0, 1)
-plt.show()

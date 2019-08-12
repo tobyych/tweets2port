@@ -5,12 +5,15 @@ black==19.3b0
 boto==2.49.0
 boto3==1.9.165
 botocore==1.12.165
+brokenaxes==0.3.1
 certifi==2019.3.9
 chardet==3.0.4
 Click==7.0
+cvxopt==1.2.3
 cycler==0.10.0
 docutils==0.14
 gensim==3.7.3
+glove-python==0.1.0
 idna==2.8
 isort==4.3.20
 jmespath==0.9.4

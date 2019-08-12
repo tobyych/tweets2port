@@ -1,6 +1,7 @@
 import data as d
 import word2vec as w2v
 import nn
+import markowitz as m
 from preprocessing import stock_universe, stock_universe_test
 import os, sys
 import pandas as pd
@@ -11,6 +12,7 @@ from utils import get_hyperparam_list, NN_HYPERPARAM_DICT, RNN_HYPERPARAM_DICT
 import pickle
 import torch
 import rnn_seq as rnn
+import plot as p
 
 PATH_TO_PRICES = "temp/prices/pickle"
 PATH_TO_EMBEDDINGS = "temp/padded_embeddings/pickle"
@@ -55,7 +57,7 @@ def main(passed_args=None):
         help="toogle this option if you are making predictions",
     )
     parser.add_argument(
-        "--markowtiz",
+        "--markowitz",
         "-m",
         dest="markowitz",
         action="store_true",
@@ -183,7 +185,15 @@ def main(passed_args=None):
         sys.exit()
 
     if args.markowitz:
-        pass
+        model_dict = {
+            "word2vec": "black",
+            "glove": "blue",
+            "glove_pretrained": "green",
+            # "rnn": "g-",
+            "actual": "red",  # this needs to be the last item
+        }
+        p.plot_frontier(model_dict)
+        sys.exit()
 
     if os.path.exists("./temp/best-hyperparam-glove.txt"):
         with open("./temp/best-hyperparam-glove.txt", "rb") as f:

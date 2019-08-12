@@ -2,6 +2,8 @@ import os, json, csv, pickle
 import pandas as pd
 import numpy as np
 from preprocessing import stock_universe
+import yfinance as yf
+from datetime import datetime
 
 
 def load_tweets(
@@ -197,12 +199,12 @@ def get_return_by_stock(stock_name, df, to_csv=False, to_pickle=True):
     return df
 
 
-def load_output(path_to_output, to_csv=False, to_pickle=True):
-    filelist = os.listdir(path_to_output)
+def load_predictions(path_to_pred, path_to_output, to_csv=False, to_pickle=True):
+    filelist = os.listdir(path_to_pred)
     stock_list = []
     df_list = []
     for filename in filelist:
-        with open(os.path.join(path_to_output, filename), "r") as f:
+        with open(os.path.join(path_to_pred, filename), "r") as f:
             csv_reader = csv.reader(f, delimiter=",")
             temp_data = []
             for line in csv_reader:
@@ -217,7 +219,29 @@ def load_output(path_to_output, to_csv=False, to_pickle=True):
             )  # taking away '.csv' 4 chars
     df = pd.DataFrame(df_list)
     df.index = stock_list
+    if not os.path.exists(path_to_output):
+        os.makedirs(path_to_output)
     if to_csv:
-        df.to_csv("temp/pred.csv")
+        df.to_csv(os.path.join(path_to_output, "pred.csv"))
     if to_pickle:
-        df.to_pickle("temp/pred.pickle")
+        df.to_pickle(os.path.join(path_to_output, "pred.pickle"))
+    return df
+
+
+def get_etf_mean_var(
+    tickers=["SPY", "EEM", "GDX", "XLF", "QQQ", "USO", "TVIX", "EWZ", "EFA"],
+    start=datetime(2014, 1, 1),
+    end=datetime(2016, 3, 31),
+):
+    mean_var = {}
+    for ticker in tickers:
+        data = yf.download(ticker, start, end)
+        data = data.asfreq(pd.tseries.offsets.BDay())
+        data.fillna(method="pad", inplace=True)
+        data = data.pct_change(1)
+        data.replace([np.inf, -np.inf], np.nan, inplace=True)
+        data.fillna(method="pad", inplace=True)
+        data = data.loc[:, "Adj Close"]
+        data = data.values[-int(len(data) * 0.1) :]
+        mean_var[ticker] = (np.mean(data), np.sqrt(np.cov(data).item()))
+    return mean_var
