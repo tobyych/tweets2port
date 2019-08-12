@@ -88,20 +88,28 @@ def main(passed_args=None):
     if args.glove:
         # prepare all data required
         prices = d.load_prices()
-        w2v_model = w2v.load_glove_model(path_to_glove="./temp/glove_wv.txt")
+        w2v_model = w2v.load_glove_model(
+            path_to_glove="~/Downloads/GloVe-1.2/glove.twitter.27B.50d.txt",
+            path_to_output="./temp/glove_pretrained_w2vformat.txt",
+        )
         for stock in stock_universe:
             d.get_return_by_stock(stock, prices)
             d.load_tweets_by_stock(stock)
             w2v.get_padded_embeddings(
-                stock, w2v_model, path_to_output="./temp/padded_embeddings/glove"
+                stock,
+                w2v_model,
+                path_to_output="./temp/padded_embeddings/glove_pretrained",
             )
+        sys.exit()
 
     if args.tuning:
         hyperparam_list = get_hyperparam_list(NN_HYPERPARAM_DICT)
         best_hyperparam_list = []
         for stock in stock_universe:
             print(stock)
-            x = pd.read_pickle("temp/padded_embeddings/pickle/" + stock + ".pickle")
+            x = pd.read_pickle(
+                "temp/padded_embeddings/glove_pretrained/pickle/" + stock + ".pickle"
+            )
             y = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
             torch_dataset = nn.get_tensor_dataset(x, y)
             for hyperparam in hyperparam_list:
@@ -119,28 +127,30 @@ def main(passed_args=None):
             tuning_list.sort(key=operator.itemgetter(1))
             best_hyperparam = tuning_list[0][0]
             best_hyperparam_list.append((stock, best_hyperparam))
-        with open("best-hyperparam.txt", "wb") as f:
+        with open("./temp/best-hyperparam-glove-pretrained.txt", "wb") as f:
             pickle.dump(best_hyperparam_list, f)
         print(best_hyperparam_list)
         sys.exit()
 
     if args.predict:
-        if os.path.exists("./best-hyperparam.txt"):
-            with open("best-hyperparam.txt", "rb") as f:
+        if os.path.exists("./temp/best-hyperparam-glove.txt"):
+            with open("./temp/best-hyperparam-glove.txt", "rb") as f:
                 best_hyperparam_list = pickle.load(f)
                 best_hyperparam_dict = dict(best_hyperparam_list)
         for stock in stock_universe:
             hyperparam = best_hyperparam_dict[stock]
-            x = pd.read_pickle("temp/padded_embeddings/pickle/" + stock + ".pickle")
+            x = pd.read_pickle(
+                "temp/padded_embeddings/glove/pickle/" + stock + ".pickle"
+            )
             y = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
             torch_dataset = nn.get_tensor_dataset(x, y)
             _, test_set = nn.train_test_split(torch_dataset, hyperparam["TEST_SIZE"])
-            results = nn.predict_nn(test_set, "temp/nn/" + stock + ".pth")
+            results = nn.predict_nn(test_set, "temp/nn/glove/" + stock + ".pth")
             results_df = pd.DataFrame(results)
             results_df.columns = ["y", "pred", "loss"]
-            if not os.path.exists("./output/"):
-                os.makedirs("./output/")
-            results_df.to_csv("./output/" + stock + ".csv")
+            if not os.path.exists("./output/glove"):
+                os.makedirs("./output/glove")
+            results_df.to_csv("./output/glove/" + stock + ".csv")
         sys.exit()
 
     if args.train_rnn:
@@ -150,16 +160,22 @@ def main(passed_args=None):
                 print(stock)
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 returns = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
-                returns = nn.normalise(torch.tensor(np.stack(returns.values, axis=0), device=device))
+                returns = nn.normalise(
+                    torch.tensor(np.stack(returns.values, axis=0), device=device)
+                )
                 vectorised_seq, vocab = rnn.get_vectorised_seq_by_stock(stock)
                 input_size = len(vocab)
 
-                encoder, feedforward, _, results = rnn.train_rnn(vectorised_seq, returns, input_size, hyperparam)
+                encoder, feedforward, _, results = rnn.train_rnn(
+                    vectorised_seq, returns, input_size, hyperparam
+                )
                 if not os.path.exists("temp/rnn"):
                     os.makedirs("temp/rnn/encoder")
                     os.makedirs("temp/rnn/feedforward")
                 torch.save(encoder.state_dict(), "temp/rnn/encoder/" + stock + ".pth")
-                torch.save(feedforward.state_dict(), "temp/rnn/feedforward/" + stock + ".pth")
+                torch.save(
+                    feedforward.state_dict(), "temp/rnn/feedforward/" + stock + ".pth"
+                )
                 results_df = pd.DataFrame(results)
                 results_df.columns = ["returns", "pred", "loss"]
                 if not os.path.exists("./output/rnn"):
@@ -170,24 +186,24 @@ def main(passed_args=None):
     if args.markowitz:
         pass
 
-    if os.path.exists("./best-hyperparam.txt"):
-        with open("best-hyperparam.txt", "rb") as f:
+    if os.path.exists("./temp/best-hyperparam-glove.txt"):
+        with open("./temp/best-hyperparam-glove.txt", "rb") as f:
             best_hyperparam_list = pickle.load(f)
             best_hyperparam_dict = dict(best_hyperparam_list)
 
     for stock in stock_universe:
         print(stock)
         hyperparam = best_hyperparam_dict[stock]
-        x = pd.read_pickle("temp/padded_embeddings/pickle/" + stock + ".pickle")
+        x = pd.read_pickle("temp/padded_embeddings/glove/pickle/" + stock + ".pickle")
         y = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
         torch_dataset = nn.get_tensor_dataset(x, y)
         train_set, test_set = nn.train_test_split(
             torch_dataset, hyperparam["TEST_SIZE"]
         )
         model, _, _ = nn.train_nn(train_set, test_set, hyperparam)
-        if not os.path.exists("temp/nn"):
-            os.makedirs("temp/nn")
-        torch.save(model.state_dict(), "temp/nn/" + stock + ".pth")
+        if not os.path.exists("temp/nn/glove"):
+            os.makedirs("temp/nn/glove")
+        torch.save(model.state_dict(), "temp/nn/glove/" + stock + ".pth")
     sys.exit()
 
 

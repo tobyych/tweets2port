@@ -63,8 +63,8 @@ def get_tensor_dataset(x, y):
     output: tensor datasets (training, validation, testing)
     """
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    x = torch.Tensor(np.stack(x.values, axis=0), device=device)
-    y = normalise(torch.Tensor(np.stack(y.values, axis=0)), device=device)
+    x = torch.tensor(np.stack(x.values, axis=0), device=device)
+    y = normalise(torch.tensor(np.stack(y.values, axis=0), device=device))
     torch_dataset = data.TensorDataset(x, y)
     return torch_dataset
 

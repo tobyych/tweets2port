@@ -1,14 +1,14 @@
 import itertools
 
 NN_HYPERPARAM_DICT = {
-    "BATCH_SIZE": [16, 32],
-    "N_EPOCHS": [50, 100, 500],
-    "LEARNING_RATE": [1e-4, 1e-5, 1e-6],
-    "WEIGHT_DECAY": [1e-5, 1e-6],
-    "CLIPPING_THRESHOLD": [5],
+    "BATCH_SIZE": [16],
+    "N_EPOCHS": [100],
+    "LEARNING_RATE": [1e-4],
+    "WEIGHT_DECAY": [1e-5],
+    "CLIPPING_THRESHOLD": [2],
     "VALIDATION_SIZE": [0.2],
     "TEST_SIZE": [0.1],
-    "DROP_LAST": [True, False],
+    "DROP_LAST": [True],
 }
 
 RNN_HYPERPARAM_DICT = {

@@ -40,7 +40,11 @@ def get_embeddings(tweets_df, model):
         for item in tweets_df.iloc[i].to_list()[0]:
             averaged_wv = np.zeros(model.vector_size, dtype="float32")
             for word in item:
-                averaged_wv += model.wv[word] / len(item)
+                try:
+                    word_vec = model.wv[word]
+                except KeyError:
+                    word_vec = np.random.normal(scale=0.6, size=(model.vector_size,))
+                averaged_wv += word_vec / len(item)
             inner_list.append(averaged_wv)
         outer_list.append(inner_list)
     embeddings_df = pd.Series(outer_list)
