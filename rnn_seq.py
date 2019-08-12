@@ -114,22 +114,22 @@ def get_seq_input(vectorised_seq, device):
     return seq_tensor, seq_lengths, perm_idx
 
 
-def train_rnn(vectorised_seq, returns, input_size, hyperparam, eval_only=False):
-    if eval_only == False:
-        valid_idx = len(vectorised_seq) - int(
+def train_rnn(vectorised_seq, returns, input_size, hyperparam, eval_only=False, path_to_encoder=None, path_to_feedforward=None):
+    valid_idx = len(vectorised_seq) - int(
             len(vectorised_seq) * hyperparam["VALIDATION_SIZE"]
         )
-        train_vectorised_seq, test_vectorised_seq = (
-            vectorised_seq[:valid_idx],
-            vectorised_seq[valid_idx:],
-        )
-        train_returns, test_returns = returns[:valid_idx], returns[valid_idx:]
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        encoder = EncoderRNN(
+    train_vectorised_seq, test_vectorised_seq = (
+        vectorised_seq[:valid_idx],
+        vectorised_seq[valid_idx:],
+    )
+    train_returns, test_returns = returns[:valid_idx], returns[valid_idx:]
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    encoder = EncoderRNN(
             input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"]
         ).to(device)
-        feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"]).to(device)
-        criterion = torch.nn.MSELoss().to(device)
+    feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"]).to(device)
+    criterion = torch.nn.MSELoss().to(device)
+    if eval_only == False:    
         optimizer_encoder = torch.optim.Adam(
             encoder.parameters(), lr=hyperparam["LEARNING_RATE"]
         )
@@ -171,6 +171,12 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam, eval_only=False):
             print(f"(epoch {epoch}) training loss: {training_losses[epoch]}")
 
     # eval mode
+    if eval_only == True and path_to_encoder is not None and path_to_feedforward is not None:
+        encoder.load_state_dict(torch.load(path_to_encoder))
+        feedforward.load_state_dict(torch.load(path_to_feedforward))
+        encoder.eval()
+        feedforward.eval()
+
     with torch.set_grad_enabled(False):
         results = []
         for seq, ret in zip(test_vectorised_seq, test_returns):
@@ -191,7 +197,7 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam, eval_only=False):
             loss = criterion(pred, ret)
             results.append((ret.item(), pred.item(), loss.item()))
     print("...training has been completed")
-    return encoder, feedforward, training_losses, results
+    return encoder, feedforward, results
 
 
 # # REMEMBER: Your outputs are sorted. If you want the original ordering

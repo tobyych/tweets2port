@@ -13,7 +13,7 @@ import pickle
 import torch
 import rnn_seq as rnn
 import plot as p
-
+import metric as me
 PATH_TO_PRICES = "temp/prices/pickle"
 PATH_TO_EMBEDDINGS = "temp/padded_embeddings/pickle"
 PATH_TO_WORD2VEC = "temp/word2vec.model"
@@ -71,6 +71,14 @@ def main(passed_args=None):
         action="store_true",
         default=False,
         help="toogle this option if you are obtaining dataset using glove",
+    )
+    parser.add_argument(
+        "--metrics",
+        "-f",
+        dest="metrics",
+        action="store_true",
+        default=False,
+        help="toogle this option if you are evaluating the metrics",
     )
     args = parser.parse_args(passed_args)
     if args.word2vec:
@@ -156,27 +164,31 @@ def main(passed_args=None):
         sys.exit()
 
     if args.train_rnn:
+        eval_only = True
         hyperparam_list = get_hyperparam_list(RNN_HYPERPARAM_DICT)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         for hyperparam in hyperparam_list:
-            for stock in stock_universe_test:
+            for stock in stock_universe:
                 print(stock)
-                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 returns = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
                 returns = nn.normalise(
                     torch.tensor(np.stack(returns.values, axis=0), device=device)
                 )
                 vectorised_seq, vocab = rnn.get_vectorised_seq_by_stock(stock)
                 input_size = len(vocab)
-                encoder, feedforward, _, results = rnn.train_rnn(
-                    vectorised_seq, returns, input_size, hyperparam
+                encoder, feedforward, results = rnn.train_rnn(
+                    vectorised_seq, returns, input_size, hyperparam, eval_only=eval_only,
+                    path_to_encoder='temp/rnn/encoder/' + stock + '.pth',
+                    path_to_feedforward='temp/rnn/feedforward/' + stock + '.pth'
                 )
-                if not os.path.exists("temp/rnn"):
-                    os.makedirs("temp/rnn/encoder")
-                    os.makedirs("temp/rnn/feedforward")
-                torch.save(encoder.state_dict(), "temp/rnn/encoder/" + stock + ".pth")
-                torch.save(
-                    feedforward.state_dict(), "temp/rnn/feedforward/" + stock + ".pth"
-                )
+                if eval_only == False:
+                    if not os.path.exists("temp/rnn"):
+                        os.makedirs("temp/rnn/encoder")
+                        os.makedirs("temp/rnn/feedforward")
+                    torch.save(encoder.state_dict(), "temp/rnn/encoder/" + stock + ".pth")
+                    torch.save(
+                        feedforward.state_dict(), "temp/rnn/feedforward/" + stock + ".pth"
+                    )
                 results_df = pd.DataFrame(results)
                 results_df.columns = ["returns", "pred", "loss"]
                 if not os.path.exists("./output/rnn"):
@@ -194,6 +206,13 @@ def main(passed_args=None):
         }
         p.plot_frontier(model_dict)
         sys.exit()
+
+    if args.metrics:
+        models = ['rnn', 'glove', 'glove_pretrained', 'word2vec']
+        for model in models:
+            me.get_metrics_summary(model)
+        sys.exit()
+
 
     if os.path.exists("./temp/best-hyperparam-glove.txt"):
         with open("./temp/best-hyperparam-glove.txt", "rb") as f:

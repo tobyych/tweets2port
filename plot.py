@@ -65,8 +65,3 @@ def plot_etf_points(mean_var_dict):
     plt.show()
     fig.savefig("output/graphs/etf.png")
     return fig
-
-
-mean_var_dict = d.get_etf_mean_var()
-print(mean_var_dict)
-plot_etf_points(mean_var_dict)
