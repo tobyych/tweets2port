@@ -187,7 +187,7 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam):
                 )
             pred = feedforward(avg_tweet_rep.view(-1))
             loss = criterion(pred, ret)
-        results.append((ret.item(), pred.item(), loss.item()))
+            results.append((ret.item(), pred.item(), loss.item()))
     print("...training has been completed")
     return encoder, feedforward, training_losses, results
 
