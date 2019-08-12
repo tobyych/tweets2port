@@ -1,7 +1,7 @@
 import data as d
 import word2vec as w2v
 import nn
-from preprocessing import stock_universe
+from preprocessing import stock_universe, stock_universe_test
 import os, sys
 import pandas as pd
 import numpy as np
@@ -156,7 +156,7 @@ def main(passed_args=None):
     if args.train_rnn:
         hyperparam_list = get_hyperparam_list(RNN_HYPERPARAM_DICT)
         for hyperparam in hyperparam_list:
-            for stock in stock_universe:
+            for stock in stock_universe_test:
                 print(stock)
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
                 returns = pd.read_pickle("temp/returns/pickle/" + stock + ".pickle")
@@ -165,7 +165,6 @@ def main(passed_args=None):
                 )
                 vectorised_seq, vocab = rnn.get_vectorised_seq_by_stock(stock)
                 input_size = len(vocab)
-
                 encoder, feedforward, _, results = rnn.train_rnn(
                     vectorised_seq, returns, input_size, hyperparam
                 )

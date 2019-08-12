@@ -115,11 +115,18 @@ def get_seq_input(vectorised_seq, device):
 
 
 def train_rnn(vectorised_seq, returns, input_size, hyperparam):
-    valid_idx = len(vectorised_seq) - int(len(vectorised_seq) * hyperparam['VALIDATION_SIZE'])
-    train_vectorised_seq, test_vectorised_seq = vectorised_seq[:valid_idx], vectorised_seq[valid_idx:] 
-    train_returns, test_returns = returns[:valid_idx], returns[valid_idx:] 
+    valid_idx = len(vectorised_seq) - int(
+        len(vectorised_seq) * hyperparam["VALIDATION_SIZE"]
+    )
+    train_vectorised_seq, test_vectorised_seq = (
+        vectorised_seq[:valid_idx],
+        vectorised_seq[valid_idx:],
+    )
+    train_returns, test_returns = returns[:valid_idx], returns[valid_idx:]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    encoder = EncoderRNN(input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"]).to(device)
+    encoder = EncoderRNN(
+        input_size=input_size, hidden_size=hyperparam["HIDDEN_SIZE"]
+    ).to(device)
     feedforward = FeedForward(input_size=hyperparam["HIDDEN_SIZE"]).to(device)
     criterion = torch.nn.MSELoss().to(device)
     optimizer_encoder = torch.optim.Adam(
@@ -133,7 +140,8 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam):
         running_training_loss = 0
         for seq, ret in zip(train_vectorised_seq, train_returns):
             # if no tweet on a day, then directly pass a zero tensor to feedforward
-            if len(seq[0]) == 0:
+            seq = [s for s in seq if len(s) != 0]
+            if seq == [] or len(seq[0]) == 0:
                 avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"]).to(device)
             else:
                 list_daily_rep = []
@@ -142,11 +150,11 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam):
                     optimizer_encoder.zero_grad()
                     _, (ht, _) = encoder(seq_tensor, seq_lengths)
                     list_daily_rep.append(ht[-1])
-                avg_tweet_rep = torch.mean(
-                    torch.stack(list_daily_rep), dim=0
-                ).to(device)
+                avg_tweet_rep = torch.mean(torch.stack(list_daily_rep), dim=0).to(
+                    device
+                )
             optimizer_ff.zero_grad()
-            pred = feedforward(avg_tweet_rep.view(-1, ))
+            pred = feedforward(avg_tweet_rep.view(-1))
             loss = criterion(pred, ret)
             loss.backward()
             torch.nn.utils.clip_grad_value_(
@@ -165,7 +173,8 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam):
         results = []
         for seq, ret in zip(test_vectorised_seq, test_returns):
             # if no tweet on a day, then directly pass a zero tensor to feedforward
-            if len(seq[0]) == 0:
+            seq = [s for s in seq if len(s) != 0]
+            if seq == [] or len(seq[0]) == 0:
                 avg_tweet_rep = torch.zeros(hyperparam["HIDDEN_SIZE"]).to(device)
             else:
                 list_daily_rep = []
@@ -173,14 +182,15 @@ def train_rnn(vectorised_seq, returns, input_size, hyperparam):
                     seq_tensor, seq_lengths, _ = get_seq_input([s], device=device)
                     _, (ht, _) = encoder(seq_tensor, seq_lengths)
                     list_daily_rep.append(ht[-1])
-                avg_tweet_rep = torch.mean(
-                    torch.stack(list_daily_rep), dim=0
-                ).to(device)
-            pred = feedforward(avg_tweet_rep.view(-1,))
+                avg_tweet_rep = torch.mean(torch.stack(list_daily_rep), dim=0).to(
+                    device
+                )
+            pred = feedforward(avg_tweet_rep.view(-1))
             loss = criterion(pred, ret)
         results.append((ret.item(), pred.item(), loss.item()))
     print("...training has been completed")
     return encoder, feedforward, training_losses, results
+
 
 # # REMEMBER: Your outputs are sorted. If you want the original ordering
 # # back (to compare to some gt labels) unsort them
