@@ -198,9 +198,10 @@ def prepocess():
                 clean_text_list.append((idx, p.clean(text)))
             clean_text = dict(clean_text_list)
 
-            ofpath = os.path.join("../data/stocknet-dataset/tweet/new_processed",os.path.basename(
-                os.path.normpath(folder)
-            ))
+            ofpath = os.path.join(
+                "../data/stocknet-dataset/tweet/new_processed",
+                os.path.basename(os.path.normpath(folder)),
+            )
             if not os.path.exists(ofpath):
                 os.makedirs(ofpath)
             ofname = filename
@@ -230,21 +231,6 @@ stock_universe = [
     "MSFT",
     "ABBV",
     "MCD",
-    "T",
-    "PG",
-    "XOM",
-    "BA",
-    "GE",
-    "AMGN",
-    "DIS",
-    "CSCO",
-    "KO",
-    "C",
-    "D",
-]
-
-
-stock_universe_test = [
     "T",
     "PG",
     "XOM",

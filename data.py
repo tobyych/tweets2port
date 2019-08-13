@@ -245,3 +245,4 @@ def get_etf_mean_var(
         data = data.values[-int(len(data) * 0.1) :]
         mean_var[ticker] = (np.mean(data), np.sqrt(np.cov(data).item()))
     return mean_var
+

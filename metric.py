@@ -21,9 +21,14 @@ def get_metrics_summary(model):
 	        temp_df = pd.DataFrame(temp_data)
 	        temp_df = temp_df.apply(pd.to_numeric)
 	        temp_df.columns = columns
-	        r2 = r2_score(temp_df.loc[:, 'returns'], temp_df.loc[:, 'pred'])
-	        mse = mean_squared_error(temp_df.loc[:, 'returns'], temp_df.loc[:, 'pred'])
-	        mae = median_absolute_error(temp_df.loc[:, 'returns'], temp_df.loc[:, 'pred'])
+	        if model == 'rnn':
+	        	y_str = 'returns'
+	        else:
+	        	y_str = 'y'
+	        pred_str = 'pred'
+	        r2 = r2_score(temp_df.loc[:, y_str], temp_df.loc[:, pred_str])
+	        mse = mean_squared_error(temp_df.loc[:, y_str], temp_df.loc[:, pred_str])
+	        mae = median_absolute_error(temp_df.loc[:, y_str], temp_df.loc[:, pred_str])
 	        result_list.append((stock, r2, mse, mae))
 	result_df = pd.DataFrame(result_list)
 	result_df.columns = ['stock', 'r2', 'mse', 'mae']

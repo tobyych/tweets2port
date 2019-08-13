@@ -2,7 +2,7 @@ import data as d
 import word2vec as w2v
 import nn
 import markowitz as m
-from preprocessing import stock_universe, stock_universe_test
+from preprocessing import stock_universe
 import os, sys
 import pandas as pd
 import numpy as np
@@ -201,9 +201,11 @@ def main(passed_args=None):
             "word2vec": "black",
             "glove": "blue",
             "glove_pretrained": "green",
-            # "rnn": "g-",
+            "rnn": "orange",
             "actual": "red",  # this needs to be the last item
         }
+        # mean_var_dict = d.get_etf_mean_var()
+        # p.plot_frontier_with_points(model_dict, mean_var_dict)
         p.plot_frontier(model_dict)
         sys.exit()
 
