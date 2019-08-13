@@ -65,7 +65,9 @@ def plot_etf_points(mean_var_dict):
     return fig
 
 
-def plot_frontier_with_points(model_dict, mean_var_dict, path_to_output="./output/graphs/"):
+def plot_frontier_with_points(
+    model_dict, mean_var_dict, path_to_output="./output/graphs/"
+):
     fig, ax = plt.subplots(1)
     # bax = brokenaxes(ylims=((0, 0.01), (0.05, 0.4)), d=0.001, tilt=0, hspace=0.5)
     for model_name, line_color in model_dict.items():
@@ -77,6 +79,8 @@ def plot_frontier_with_points(model_dict, mean_var_dict, path_to_output="./outpu
                 path_to_pred=os.path.join("./output", model_name),
                 path_to_output=os.path.join("./temp/pred", model_name),
             )
+        # if model_name == 'actual':
+
         _, temp_mean, temp_std = m.optimal_port(returns, short_sell=False)
         ax.plot(temp_std, temp_mean, color=line_color, label=model_name)
     for etf_name, mean_var_tuple in mean_var_dict.items():
@@ -87,8 +91,8 @@ def plot_frontier_with_points(model_dict, mean_var_dict, path_to_output="./outpu
             markersize=6,
             label=etf_name,
         )
-    plt.ylim(-0.1, 0.4)
-    plt.xlim(0, 0.3)
+    # plt.ylim(-0.1, 0.4)
+    # plt.xlim(0, 0.3)
     plt.ylabel("mean")
     plt.xlabel("std")
     plt.legend()

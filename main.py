@@ -14,6 +14,7 @@ import torch
 import rnn_seq as rnn
 import plot as p
 import metric as me
+
 PATH_TO_PRICES = "temp/prices/pickle"
 PATH_TO_EMBEDDINGS = "temp/padded_embeddings/pickle"
 PATH_TO_WORD2VEC = "temp/word2vec.model"
@@ -177,17 +178,24 @@ def main(passed_args=None):
                 vectorised_seq, vocab = rnn.get_vectorised_seq_by_stock(stock)
                 input_size = len(vocab)
                 encoder, feedforward, results = rnn.train_rnn(
-                    vectorised_seq, returns, input_size, hyperparam, eval_only=eval_only,
-                    path_to_encoder='temp/rnn/encoder/' + stock + '.pth',
-                    path_to_feedforward='temp/rnn/feedforward/' + stock + '.pth'
+                    vectorised_seq,
+                    returns,
+                    input_size,
+                    hyperparam,
+                    eval_only=eval_only,
+                    path_to_encoder="temp/rnn/encoder/" + stock + ".pth",
+                    path_to_feedforward="temp/rnn/feedforward/" + stock + ".pth",
                 )
                 if eval_only == False:
                     if not os.path.exists("temp/rnn"):
                         os.makedirs("temp/rnn/encoder")
                         os.makedirs("temp/rnn/feedforward")
-                    torch.save(encoder.state_dict(), "temp/rnn/encoder/" + stock + ".pth")
                     torch.save(
-                        feedforward.state_dict(), "temp/rnn/feedforward/" + stock + ".pth"
+                        encoder.state_dict(), "temp/rnn/encoder/" + stock + ".pth"
+                    )
+                    torch.save(
+                        feedforward.state_dict(),
+                        "temp/rnn/feedforward/" + stock + ".pth",
                     )
                 results_df = pd.DataFrame(results)
                 results_df.columns = ["returns", "pred", "loss"]
@@ -198,23 +206,24 @@ def main(passed_args=None):
 
     if args.markowitz:
         model_dict = {
+            "dtm": "purple",
+            "tfidf": "pink",
             "word2vec": "black",
             "glove": "blue",
             "glove_pretrained": "green",
             "rnn": "orange",
-            "actual": "red",  # this needs to be the last item
+            "actual": "red",
         }
-        # mean_var_dict = d.get_etf_mean_var()
-        # p.plot_frontier_with_points(model_dict, mean_var_dict)
-        p.plot_frontier(model_dict)
+        mean_var_dict = d.get_etf_mean_var()
+        p.plot_frontier_with_points(model_dict, mean_var_dict)
+        # p.plot_frontier(model_dict)
         sys.exit()
 
     if args.metrics:
-        models = ['rnn', 'glove', 'glove_pretrained', 'word2vec']
+        models = ["rnn", "glove", "glove_pretrained", "word2vec", "dtm", "tfidf"]
         for model in models:
             me.get_metrics_summary(model)
         sys.exit()
-
 
     if os.path.exists("./temp/best-hyperparam-glove.txt"):
         with open("./temp/best-hyperparam-glove.txt", "rb") as f:
