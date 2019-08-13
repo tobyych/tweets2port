@@ -1,4 +1,4 @@
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import data as d
 import pandas as pd
 import numpy as np
@@ -6,7 +6,7 @@ from preprocessing import stock_universe
 import os
 import torch
 from nn import train_test_split
-
+import csv
 
 class Tweet2Returns(torch.nn.Module):
     def __init__(self, vocab_size):
@@ -29,7 +29,7 @@ def train(stock):
         " ".join([item for sublist in x for item in sublist]) for x in tweets.iloc[:, 0]
     ]
     temp_returns = d.get_return_by_stock(stock, prices)
-    cnt_vec = CountVectorizer()
+    cnt_vec = TfidfVectorizer()
     dtm = cnt_vec.fit_transform(temp_tweets)
     dtm = dtm.toarray()
     dtm = torch.tensor(np.stack(dtm, axis=0), dtype=torch.float, device=device)
@@ -39,12 +39,11 @@ def train(stock):
     train_set, test_set = train_test_split(dataset, test_size=0.1)
     train_loader = torch.utils.data.DataLoader(dataset=train_set)
     test_loader = torch.utils.data.DataLoader(dataset=test_set)
-    nn = Tweet2Returns(dtm.shape[1])
-    criterion = torch.nn.MSELoss()
+    nn = Tweet2Returns(dtm.shape[1]).to(device)
+    criterion = torch.nn.MSELoss().to(device)
     optimizer = torch.optim.RMSprop(nn.parameters(), lr=1e-5)
 
     training_losses = []
-    validation_losses = []
     for epoch in range(100):
         # training
         running_train_loss = 0
@@ -69,22 +68,22 @@ def train(stock):
             batch_y = batch_y.view(-1, 1)
             valid_loss = criterion(pred, batch_y)
             running_valid_loss += valid_loss.item()
-            results.append((batch_y, pred, valid_loss))
-        validation_losses.append(running_valid_loss)
+            results.append((batch_y.item(), pred.item(), valid_loss.item()))
         print(
-            f"(epoch {epoch}) training loss: {training_losses[epoch]}, validation loss: {validation_losses[epoch]}"
+            f"(epoch {epoch}) training loss: {training_losses[epoch]}"
         )
     print("...training has been completed")
-    return nn, training_losses, validation_losses, results
+    return nn, training_losses, results
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 prices = d.load_prices()
 
 for stock in stock_universe:
-    _, _, _, results = train(stock)
+    _, _, results = train(stock)
     results_df = pd.DataFrame(results)
     results_df.columns = ["y", "pred", "loss"]
-    if not os.path.exists("./output/dtm"):
-        os.makedirs("./output/dtm")
-    results_df.to_csv("./output/dtm/" + stock + ".csv")
+    if not os.path.exists("./output/tfidf"):
+        os.makedirs("./output/tfidf")
+    results_df.to_csv("./outputt/tfidf/" + stock + ".csv")
+
