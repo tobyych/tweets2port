@@ -5,8 +5,9 @@ import numpy as np
 from preprocessing import stock_universe
 import os
 import torch
-from nn import train_test_split
+from nn import train_test_split, normalise
 import csv
+
 
 class Tweet2Returns(torch.nn.Module):
     def __init__(self, vocab_size):
@@ -34,7 +35,7 @@ def train(stock):
     dtm = dtm.toarray()
     dtm = torch.tensor(np.stack(dtm, axis=0), dtype=torch.float, device=device)
     returns = torch.tensor(np.stack(temp_returns.values, axis=0), device=device)
-    # print(dtm.shape, returns.shape)
+    returns = normalise(returns)
     dataset = torch.utils.data.TensorDataset(dtm, returns)
     train_set, test_set = train_test_split(dataset, test_size=0.1)
     train_loader = torch.utils.data.DataLoader(dataset=train_set)
@@ -69,9 +70,7 @@ def train(stock):
             valid_loss = criterion(pred, batch_y)
             running_valid_loss += valid_loss.item()
             results.append((batch_y.item(), pred.item(), valid_loss.item()))
-        print(
-            f"(epoch {epoch}) training loss: {training_losses[epoch]}"
-        )
+        print(f"(epoch {epoch}) training loss: {training_losses[epoch]}")
     print("...training has been completed")
     return nn, training_losses, results
 
