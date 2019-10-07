@@ -1,9 +1,9 @@
 import itertools
 
 NN_HYPERPARAM_DICT = {
-    "BATCH_SIZE": [16],
-    "N_EPOCHS": [100],
-    "LEARNING_RATE": [1e-4],
+    "BATCH_SIZE": [8, 16],
+    "N_EPOCHS": [100, 300],
+    "LEARNING_RATE": [1e-3, 3e-3, 1e-4],
     "WEIGHT_DECAY": [1e-5],
     "CLIPPING_THRESHOLD": [2],
     "VALIDATION_SIZE": [0.2],
@@ -12,8 +12,8 @@ NN_HYPERPARAM_DICT = {
 }
 
 RNN_HYPERPARAM_DICT = {
-    "BATCH_SIZE": [32],
-    "N_EPOCHS": [50],
+    "BATCH_SIZE": [16, 32],
+    "N_EPOCHS": [50, 100],
     "LEARNING_RATE": [1e-3],
     "WEIGHT_DECAY": [1e-3],
     "CLIPPING_THRESHOLD": [3],
@@ -26,7 +26,7 @@ RNN_HYPERPARAM_DICT = {
 
 def get_hyperparam_list(hyperparameter_dict):
     """
-    input: ?
+    input: dictionary of key: hyperparam, value: list of values to cross validate
     output: a list of dictionaries, each containing the hyperparameter name and value pairs
     """
     var_names = hyperparameter_dict.keys()
